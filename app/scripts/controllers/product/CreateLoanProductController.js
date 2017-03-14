@@ -4,6 +4,8 @@
             scope.restrictDate = new Date();
             scope.formData = {};
             scope.charges = [];
+            scope.floatingrateoptions = [];
+            scope.loanProductConfigurableAttributes = [];
             scope.showOrHideValue = "show";
             scope.configureFundOptions = [];
             scope.specificIncomeAccountMapping = [];
@@ -18,6 +20,19 @@
             scope.frFlag = false;
             scope.fiFlag = false;
             scope.piFlag = false;
+            scope.amortization = true;
+            scope.arrearsTolerance = true;
+            scope.graceOnArrearsAging = true;
+            scope.interestCalcPeriod = true;
+            scope.interestMethod = true;
+            scope.graceOnPrincipalAndInterest = true;
+            scope.repaymentFrequency = true;
+            scope.transactionProcessingStrategy = true;
+            scope.allowAttributeConfiguration = true;
+            scope.interestRecalculationOnDayTypeOptions = [];
+            for (var i = 1; i <= 28; i++) {
+                scope.interestRecalculationOnDayTypeOptions.push(i);
+            }
             resourceFactory.loanProductResource.get({resourceType: 'template'}, function (data) {
                 scope.product = data;
                 scope.assetAccountOptions = scope.product.accountingMappingOptions.assetAccountOptions || [];
@@ -54,6 +69,15 @@
                 scope.formData.isInterestRecalculationEnabled = scope.product.isInterestRecalculationEnabled;
                 scope.formData.interestRecalculationCompoundingMethod = scope.product.interestRecalculationData.interestRecalculationCompoundingType.id;
                 scope.formData.rescheduleStrategyMethod = scope.product.interestRecalculationData.rescheduleStrategyType.id;
+                scope.formData.preClosureInterestCalculationStrategy = scope.product.interestRecalculationData.preClosureInterestCalculationStrategy.id;
+                if(scope.product.interestRecalculationData.recalculationRestFrequencyType){
+                    scope.formData.recalculationRestFrequencyType = scope.product.interestRecalculationData.recalculationRestFrequencyType.id;
+                }
+                scope.floatingRateOptions = data.floatingRateOptions ;
+                scope.formData.isFloatingInterestRateCalculationAllowed = false ;
+                scope.formData.isLinkedToFloatingInterestRates = false ;
+                scope.formData.allowVariableInstallments = false ;
+                scope.product.interestRecalculationNthDayTypeOptions.push({"code" : "onDay", "id" : -2, "value" : "on day"});
             });
 
             scope.chargeSelected = function (chargeId) {
@@ -179,6 +203,30 @@
                 }
                 return false;
             }
+            scope.setAttributeValues = function(){
+                if(scope.allowAttributeConfiguration == false){
+                    scope.amortization = false;
+                    scope.arrearsTolerance = false;
+                    scope.graceOnArrearsAging = false;
+                    scope.interestCalcPeriod = false;
+                    scope.interestMethod = false;
+                    scope.graceOnPrincipalAndInterest = false;
+                    scope.repaymentFrequency = false;
+                    scope.transactionProcessingStrategy = false;
+                }
+            }
+
+	    scope.filterCharges = function(currencyCode, multiDisburseLoan) {
+		return function (item) {
+			if ((multiDisburseLoan != true) && item.chargeTimeType.id == 12) {
+				return false;
+			}
+			if (item.currency.code != currencyCode) { 
+				return false;
+			}
+			return true;
+		};
+	    };
 
             scope.submit = function () {
                 var reqFirstDate = dateFilter(scope.date.first, scope.df);
@@ -187,6 +235,7 @@
                 scope.feeToIncomeAccountMappings = [];
                 scope.penaltyToIncomeAccountMappings = [];
                 scope.chargesSelected = [];
+                scope.selectedConfigurableAttributes = [];
 
                 var temp = '';
 
@@ -224,11 +273,33 @@
                     scope.chargesSelected.push(temp);
                 }
 
+                if(scope.allowAttributeConfiguration == false){
+                    scope.amortization = false;
+                    scope.arrearsTolerance = false;
+                    scope.graceOnArrearsAging = false;
+                    scope.interestCalcPeriod = false;
+                    scope.interestMethod = false;
+                    scope.graceOnPrincipalAndInterest = false;
+                    scope.repaymentFrequency = false;
+                    scope.transactionProcessingStrategy = false;
+                }
+
+                scope.selectedConfigurableAttributes =
+                {amortizationType:scope.amortization,
+                    interestType:scope.interestMethod,
+                    transactionProcessingStrategyId:scope.transactionProcessingStrategy,
+                    interestCalculationPeriodType:scope.interestCalcPeriod,
+                    inArrearsTolerance:scope.arrearsTolerance,
+                    repaymentEvery:scope.repaymentFrequency,
+                    graceOnPrincipalAndInterestPayment:scope.graceOnPrincipalAndInterest,
+                    graceOnArrearsAgeing:scope.graceOnArrearsAging};
+
                 this.formData.paymentChannelToFundSourceMappings = scope.paymentChannelToFundSourceMappings;
                 this.formData.feeToIncomeAccountMappings = scope.feeToIncomeAccountMappings;
                 this.formData.penaltyToIncomeAccountMappings = scope.penaltyToIncomeAccountMappings;
                 this.formData.charges = scope.chargesSelected;
-                this.formData.locale = "en";
+                this.formData.allowAttributeOverrides = scope.selectedConfigurableAttributes;
+                this.formData.locale = scope.optlang.code;
                 this.formData.dateFormat = scope.df;
                 this.formData.startDate = reqFirstDate;
                 this.formData.closeDate = reqSecondDate;
@@ -237,6 +308,8 @@
                 if (this.formData.isInterestRecalculationEnabled) {
                     var restFrequencyDate = dateFilter(scope.date.recalculationRestFrequencyDate, scope.df);
                     scope.formData.recalculationRestFrequencyDate = restFrequencyDate;
+                    var compoundingFrequencyDate = dateFilter(scope.date.recalculationCompoundingFrequencyDate, scope.df);
+                    scope.formData.recalculationCompoundingFrequencyDate = compoundingFrequencyDate;
                 }else{
                     delete scope.formData.interestRecalculationCompoundingMethod;
                     delete scope.formData.rescheduleStrategyMethod;
@@ -244,7 +317,53 @@
                     delete scope.formData.recalculationRestFrequencyInterval;
                 }
 
+                if(this.formData.isLinkedToFloatingInterestRates) {
+                    delete scope.formData.interestRatePerPeriod ;
+                    delete scope.formData.minInterestRatePerPeriod ;
+                    delete scope.formData.maxInterestRatePerPeriod ;
+                    delete scope.formData.interestRateFrequencyType ;
+                }else {
+                    delete scope.formData.floatingRatesId ;
+                    delete scope.formData.interestRateDifferential ;
+                    delete scope.formData.isFloatingInterestRateCalculationAllowed ;
+                    delete scope.formData.minDifferentialLendingRate ;
+                    delete scope.formData.defaultDifferentialLendingRate ;
+                    delete scope.formData.maxDifferentialLendingRate ;
 
+                }
+                //If Variable Installments is not allowed for this product, remove the corresponding formData
+                if(!this.formData.allowVariableInstallments) {
+                    delete scope.formData.minimumGap ;
+                    delete scope.formData.maximumGap ;
+                }
+
+                if(this.formData.interestCalculationPeriodType == 0){
+                    this.formData.allowPartialPeriodInterestCalcualtion = false;
+                }
+
+                if (this.formData.recalculationCompoundingFrequencyType == 4) {
+                    if(this.formData.recalculationCompoundingFrequencyNthDayType == -2) {
+                        delete this.formData.recalculationCompoundingFrequencyNthDayType;
+                        delete this.formData.recalculationCompoundingFrequencyDayOfWeekType;
+                    } else {
+                        delete this.formData.recalculationCompoundingFrequencyOnDayType;
+                    }
+                } else if (this.formData.recalculationCompoundingFrequencyType == 3){
+                    delete this.formData.recalculationCompoundingFrequencyOnDayType;
+                    delete this.formData.recalculationCompoundingFrequencyNthDayType;
+                }
+
+                if (this.formData.recalculationRestFrequencyType == 4) {
+                    if(this.formData.recalculationRestFrequencyNthDayType == -2) {
+                        delete this.formData.recalculationRestFrequencyNthDayType;
+                        delete this.formData.recalculationRestFrequencyDayOfWeekType;
+                    } else {
+                        delete this.formData.recalculationRestFrequencyOnDayType;
+                    }
+                } else if (this.formData.recalculationRestFrequencyType == 3){
+                    delete this.formData.recalculationRestFrequencyOnDayType;
+                    delete this.formData.recalculationRestFrequencyNthDayType;
+                }
                 resourceFactory.loanProductResource.save(this.formData, function (data) {
                     location.path('/viewloanproduct/' + data.resourceId);
                 });

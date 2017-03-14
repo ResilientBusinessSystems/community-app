@@ -81,7 +81,13 @@
                 scope.previewRepayment = false;
                 for (var i in scope.loanaccountinfo.charges) {
                     if (scope.loanaccountinfo.charges[i].dueDate) {
-                        scope.loanaccountinfo.charges[i].dueDate = new Date(scope.loanaccountinfo.charges[i].dueDate);
+                        if(scope.loanaccountinfo.charges[i].chargeTimeType.value == "Disbursement" ||
+                            scope.loanaccountinfo.charges[i].chargeTimeType.value == "Tranche Disbursement"){
+                            scope.loanaccountinfo.charges[i].dueDate = null;
+                        }else{
+                            scope.loanaccountinfo.charges[i].dueDate = new Date(scope.loanaccountinfo.charges[i].dueDate);
+                        }
+
                     }
                 }
 
@@ -106,7 +112,7 @@
                 if (scope.loanaccountinfo.expectedFirstRepaymentOnDate) {
                     scope.formData.repaymentsStartingFromDate = new Date(scope.loanaccountinfo.expectedFirstRepaymentOnDate);
                 }
-                scope.multiDisburseLoan = scope.loanaccountinfo.multiDisburseLoan
+                scope.multiDisburseLoan = scope.loanaccountinfo.multiDisburseLoan;
                 scope.formData.productId = scope.loanaccountinfo.loanProductId;
                 scope.formData.fundId = scope.loanaccountinfo.fundId;
                 scope.formData.principal = scope.loanaccountinfo.principal;
@@ -120,6 +126,7 @@
                 scope.formData.amortizationType = scope.loanaccountinfo.amortizationType.id;
                 scope.formData.interestType = scope.loanaccountinfo.interestType.id;
                 scope.formData.interestCalculationPeriodType = scope.loanaccountinfo.interestCalculationPeriodType.id;
+                scope.formData.allowPartialPeriodInterestCalcualtion = scope.loanaccountinfo.allowPartialPeriodInterestCalcualtion;
                 scope.formData.inArrearsTolerance = scope.loanaccountinfo.inArrearsTolerance;
                 scope.formData.graceOnPrincipalPayment = scope.loanaccountinfo.graceOnPrincipalPayment;
                 scope.formData.graceOnInterestPayment = scope.loanaccountinfo.graceOnInterestPayment;
@@ -130,6 +137,8 @@
                 scope.formData.fixedEmiAmount = scope.loanaccountinfo.fixedEmiAmount;
                 scope.formData.maxOutstandingLoanBalance = scope.loanaccountinfo.maxOutstandingLoanBalance;
                 scope.formData.createStandingInstructionAtDisbursement = scope.loanaccountinfo.createStandingInstructionAtDisbursement;
+                scope.formData.isTopup = scope.loanaccountinfo.isTopup;
+                scope.formData.loanIdToClose = scope.loanaccountinfo.closureLoanId;
 
                 if (scope.loanaccountinfo.meeting) {
                     scope.formData.syncRepaymentsWithMeeting = true;
@@ -141,6 +150,11 @@
                 if (scope.loanaccountinfo.isInterestRecalculationEnabled && scope.loanaccountinfo.interestRecalculationData.recalculationRestFrequencyDate) {
                     scope.date.recalculationRestFrequencyDate = new Date(scope.loanaccountinfo.interestRecalculationData.recalculationRestFrequencyDate);
                 }
+                if (scope.loanaccountinfo.isInterestRecalculationEnabled && scope.loanaccountinfo.interestRecalculationData.recalculationCompoundingFrequencyDate) {
+                    scope.date.recalculationCompoundingFrequencyDate = new Date(scope.loanaccountinfo.interestRecalculationData.recalculationCompoundingFrequencyDate);
+                }
+                scope.formData.interestRateDifferential = scope.loanaccountinfo.interestRateDifferential ;
+                scope.formData.isFloatingInterestRate = scope.loanaccountinfo.isFloatingInterestRate ;
             }
 
             scope.addCharge = function () {
@@ -216,7 +230,7 @@
                     for (var i in scope.collaterals) {
                         scope.formData.collateral.push({type: scope.collaterals[i].type, value: scope.collaterals[i].value, description: scope.collaterals[i].description});
                     }
-                    ;
+                    
                 }
 
                 if (this.formData.syncRepaymentsWithMeeting) {
@@ -224,14 +238,17 @@
                     scope.syncRepaymentsWithMeeting = this.formData.syncRepaymentsWithMeeting;
                 }
                 delete this.formData.syncRepaymentsWithMeeting;
-
                 this.formData.locale = scope.optlang.code;
                 this.formData.dateFormat = scope.df;
                 this.formData.loanType = scope.templateType;
                 this.formData.expectedDisbursementDate = dateFilter(this.formData.expectedDisbursementDate, scope.df);
+                this.formData.submittedOnDate = dateFilter(this.formData.submittedOnDate, scope.df);
                 this.formData.interestChargedFromDate = dateFilter(this.formData.interestChargedFromDate, scope.df);
                 this.formData.repaymentsStartingFromDate = dateFilter(this.formData.repaymentsStartingFromDate, scope.df);
-
+                if(!scope.loanaccountinfo.isLoanProductLinkedToFloatingRate) {
+                    delete this.formData.interestRateDifferential ;
+                    delete this.formData.isFloatingInterestRate ;
+                }
                 resourceFactory.loanResource.save({command: 'calculateLoanSchedule'}, this.formData, function (data) {
                     scope.repaymentscheduleinfo = data;
                     scope.previewRepayment = true;
@@ -275,7 +292,10 @@
                 }
                 delete this.formData.syncRepaymentsWithMeeting;
                 delete this.formData.interestRateFrequencyType;
-
+                if(!scope.loanaccountinfo.isLoanProductLinkedToFloatingRate) {
+                    delete this.formData.interestRateDifferential ;
+                    delete this.formData.isFloatingInterestRate ;
+                }
                 this.formData.locale = scope.optlang.code;
                 this.formData.dateFormat = scope.df;
                 this.formData.loanType = scope.templateType;
@@ -287,6 +307,13 @@
                 if (scope.date.recalculationRestFrequencyDate) {
                     var restFrequencyDate = dateFilter(scope.date.recalculationRestFrequencyDate, scope.df);
                     scope.formData.recalculationRestFrequencyDate = restFrequencyDate;
+                }
+                if (scope.date.recalculationCompoundingFrequencyDate) {
+                    var restFrequencyDate = dateFilter(scope.date.recalculationCompoundingFrequencyDate, scope.df);
+                    scope.formData.recalculationCompoundingFrequencyDate = restFrequencyDate;
+                }
+                if(this.formData.interestCalculationPeriodType == 0){
+                    this.formData.allowPartialPeriodInterestCalcualtion = false;
                 }
                 resourceFactory.loanResource.put({loanId: routeParams.id}, this.formData, function (data) {
                     location.path('/viewloanaccount/' + data.loanId);

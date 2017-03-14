@@ -13,9 +13,9 @@
 	        	<i class="icon-group"></i>
 	            <strong>{{group.name}} </strong>
 	            <small>
-	            	<i class="icon-barcode"></i> {{ 'label.uniquelyidentifiedwithid' | translate }} {{group.id}} |
+	            	<i class="icon-barcode"></i> {{ 'label.heading.accnum' | translate }}: {{group.accountNo}} |
 	            	<i class="icon-building"></i> {{ 'label.heading.office' | translate }}: "{{group.officeName}}" |
-	            	<i class="icon-map-marker"></i> {{ 'label.heading.center' | translate }}:"{{group.centerName}}"
+	            	<i class="icon-map-marker"></i> {{ 'label.heading.center' | translate }}: "{{group.centerName}}"
 	            </small>
 	        </h3>
 	    </div>
@@ -148,8 +148,8 @@
 					                    <tr>
 							                <th>{{ 'label.heading.nextmeetingon' | translate }}</th>
 							                <td><span class="padded-td">{{group.collectionMeetingCalendar.nextTenRecurringDates[0] | DateFormat}}&nbsp;
-					                            <a href="#/editcalendar/{{entityType}}/{{entityId}}/{{group.collectionMeetingCalendar.id}}"
-					                               ng-show="group.collectionMeetingCalendar"><i class="icon-edit icon-white"></i></a>
+					                            <a href="#/editcalendar/{{entityType | lowercase}}/{{entityId}}/{{group.collectionMeetingCalendar.id}}"
+					                               ng-show="group.collectionMeetingCalendar && editMeeting"><i class="icon-edit icon-white"></i></a>
 					                            <span class="marginleftn7px" data-ng-hide="group.collectionMeetingCalendar.nextTenRecurringDates[0]">{{ 'label.unassigned' | translate }}</span></span>
 							                </td>
 							            </tr>
@@ -478,6 +478,7 @@
 			</tab>
 			<tab heading="{{groupdatatable.registeredTableName}}" ng-repeat="groupdatatable in groupdatatables" has-permission='READ_{{groupdatatable.registeredTableName}}'
 		     select="dataTableChange(groupdatatable)">
+				<api-validate></api-validate>
 		    <div>
 		        <div data-ng-hide="isClosedGroup" class="btn-group pull-right">
 		            <a ng-show="datatabledetails.isData" class="btn btn-danger pull-right"

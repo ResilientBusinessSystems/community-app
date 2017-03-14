@@ -9,7 +9,7 @@
 'use strict';
 // Declare module which depends on filters, and services
 angular.module('notificationWidget', [])
-    // set up the interceptor
+// set up the interceptor
     .config(['$httpProvider', function ($httpProvider) {
         $httpProvider.interceptors.push(function ($q, $injector, $location, $rootScope) {
             var notificationChannel, $http;
@@ -59,7 +59,8 @@ angular.module('notificationWidget', [])
                     $rootScope.failedResponses = [];
 
                     //check for batch API errors
-                    if (response.config.url.indexOf('batches') > 0) {
+                    if (response.config.url.indexOf &&
+                        response.config.url.indexOf('batches') > 0) {
 
                         for (var i = 0; i < response.data.length; i++) {
                             var currResponse = response.data[i];
@@ -74,8 +75,16 @@ angular.module('notificationWidget', [])
                         if ($rootScope.failedResponses.length > 0) {
                             var errResponse = response;
                             errResponse.data = $rootScope.failedResponses;
-                            error(errResponse);
-
+                            $rootScope.errorDetails = [];
+                            var errorArray = new Array();
+                            for(var i in $rootScope.failedResponses) {
+                                var errorObj = new Object();
+                                errorObj.code = JSON.parse($rootScope.failedResponses[i].body).errors[0].userMessageGlobalisationCode;
+                                errorObj.body = JSON.parse($rootScope.failedResponses[i].body).errors[0].userMessageGlobalisationCode;
+                                errorArray[i] = errorObj;
+                            }
+                            $rootScope.errorDetails.push(errorArray);
+                            return $q.reject($rootScope.errorDetails);
                             //set the value of response only to successful responses
                             response.data = $rootScope.successfulResponses;
                         }

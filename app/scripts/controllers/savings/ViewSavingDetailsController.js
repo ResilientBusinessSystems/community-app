@@ -8,8 +8,10 @@
             scope.date = {};
             scope.staffData = {};
             scope.fieldOfficers = [];
+            scope.savingaccountdetails = [];
             scope.isDebit = function (savingsTransactionType) {
-                return savingsTransactionType.withdrawal == true || savingsTransactionType.feeDeduction == true;
+                return savingsTransactionType.withdrawal == true || savingsTransactionType.feeDeduction == true
+                    || savingsTransactionType.overdraftInterest == true || savingsTransactionType.withholdTax == true;
             };
 
             scope.routeTo = function (savingsAccountId, transactionId, accountTransfer, transferId) {
@@ -102,12 +104,37 @@
                     case "unAssignSavingsOfficer":
                         location.path('/unassignsavingsofficer/' + accountId);
                         break;
+                    case "enableWithHoldTax":
+                        var changes = {
+                            withHoldTax:true
+                        };
+                        resourceFactory.savingsResource.update({accountId: accountId, command: 'updateWithHoldTax'}, changes, function (data) {
+                            route.reload();
+                        });
+                        break;
+                    case "disableWithHoldTax":
+                        var changes = {
+                            withHoldTax:false
+                        };
+                        resourceFactory.savingsResource.update({accountId: accountId, command: 'updateWithHoldTax'}, changes, function (data) {
+                            route.reload();
+                        });
+                        break;
+                    case "postInterestAsOn":
+                        location.path('/savingaccount/' + accountId + '/postInterestAsOn');
+                        break;
 
                 }
             };
 
             resourceFactory.savingsResource.get({accountId: routeParams.id, associations: 'all'}, function (data) {
                 scope.savingaccountdetails = data;
+                scope.convertDateArrayToObject('date');
+                if(scope.savingaccountdetails.groupId) {
+                    resourceFactory.groupResource.get({groupId: scope.savingaccountdetails.groupId}, function (data) {
+                        scope.groupLevel = data.groupLevel;
+                    });
+                }
                 scope.showonhold = true;
                 if(angular.isUndefined(data.onHoldFunds)){
                     scope.showonhold = false;
@@ -115,6 +142,7 @@
                 scope.staffData.staffId = data.staffId;
                 scope.date.toDate = new Date();
                 scope.date.fromDate = new Date(data.timeline.activatedOnDate);
+                
                 scope.status = data.status.value;
                 if (scope.status == "Submitted and pending approval" || scope.status == "Active" || scope.status == "Approved") {
                     scope.choice = true;
@@ -185,6 +213,11 @@
                 if (data.status.value == "Active") {
                     scope.buttons = { singlebuttons: [
                         {
+                            name: "button.postInterestAsOn",
+                            icon: "icon-arrow-right",
+                            taskPermissionName:"POSTINTERESTASON_SAVINGSACCOUNT"
+                        },
+                        {
                             name: "button.deposit",
                             icon: "icon-arrow-right",
                             taskPermissionName:"DEPOSIT_SAVINGSACCOUNT"
@@ -231,6 +264,19 @@
                                 });
                                 scope.annualChargeId = scope.charges[i].id;
                             }
+                        }
+                    }
+                    if(data.taxGroup){
+                        if(data.withHoldTax){
+                            scope.buttons.options.push({
+                                name: "button.disableWithHoldTax",
+                                taskPermissionName:"UPDATEWITHHOLDTAX_SAVINGSACCOUNT"
+                            });
+                        }else{
+                            scope.buttons.options.push({
+                                name: "button.enableWithHoldTax",
+                                taskPermissionName:"UPDATEWITHHOLDTAX_SAVINGSACCOUNT"
+                            });
                         }
                     }
                 }
@@ -296,6 +342,13 @@
             scope.export = function () {
                 scope.report = true;
                 scope.printbtn = false;
+                scope.viewReport = false;
+                scope.viewSavingReport = true;
+                scope.viewTransactionReport = false;
+            };
+
+            scope.viewJournalEntries = function(){
+                location.path("/searchtransaction/").search({savingsId: scope.savingaccountdetails.id});
             };
 
             scope.viewDataTable = function (registeredTableName,data){
@@ -307,15 +360,20 @@
             };
 
             scope.viewSavingDetails = function () {
+
                 scope.report = false;
+                scope.hidePentahoReport = true;
+                scope.viewReport = false;
+
             };
 
-
-
-            scope.viewprintdetails = function () {
-                scope.printbtn = true;
+            scope.viewPrintDetails = function () {
+                //scope.printbtn = true;
+                scope.report = true;
+                scope.viewTransactionReport = false;
+                scope.viewReport = true;
                 scope.hidePentahoReport = true;
-                scope.formData.outputType = 'HTML';
+                scope.formData.outputType = 'PDF';
                 scope.baseURL = $rootScope.hostUrl + API_VERSION + "/runreports/" + encodeURIComponent("Client Saving Transactions");
                 scope.baseURL += "?output-type=" + encodeURIComponent(scope.formData.outputType) + "&tenantIdentifier=" + $rootScope.tenantIdentifier+"&locale="+scope.optlang.code;
 
@@ -331,15 +389,20 @@
                 if (reportParams > "") {
                     scope.baseURL += "&" + reportParams;
                 }
+
                 // allow untrusted urls for iframe http://docs.angularjs.org/error/$sce/insecurl
-                scope.baseURL = $sce.trustAsResourceUrl(scope.baseURL);
+                scope.viewReportDetails = $sce.trustAsResourceUrl(scope.baseURL);
                 
             };
 
-            scope.viewsavingstransactionreceipts = function (transactionId) {
-                scope.printbtn = true;
+            scope.viewSavingsTransactionReceipts = function (transactionId) {
+                scope.report = true;
+                scope.viewTransactionReport = true;
+                scope.viewSavingReport = false;
+                scope.printbtn = false;
+                scope.viewReport = true;
                 scope.hidePentahoReport = true;
-                scope.formData.outputType = 'HTML';
+                scope.formData.outputType = 'PDF';
                 scope.baseURL = $rootScope.hostUrl + API_VERSION + "/runreports/" + encodeURIComponent("Savings Transaction Receipt");
                 scope.baseURL += "?output-type=" + encodeURIComponent(scope.formData.outputType) + "&tenantIdentifier=" + $rootScope.tenantIdentifier+"&locale="+scope.optlang.code;
 
@@ -350,7 +413,7 @@
                     scope.baseURL += "&" + reportParams;
                 }
                 // allow untrusted urls for iframe http://docs.angularjs.org/error/$sce/insecurl
-                scope.baseURL = $sce.trustAsResourceUrl(scope.baseURL);
+                scope.viewReportDetails = $sce.trustAsResourceUrl(scope.baseURL);
 
             };
             scope.printReport = function () {
@@ -381,6 +444,14 @@
                     sort.column = column;
                     sort.descending = true;
                 }
+            };
+
+            scope.checkStatus = function(){
+                if(scope.status == 'Active' || scope.status == 'Closed' || scope.status == 'Transfer in progress' ||
+                scope.status == 'Transfer on hold' || scope.status == 'Premature Closed' || scope.status == 'Matured'){
+                    return true;
+                }
+                return false;
             };
             
         }

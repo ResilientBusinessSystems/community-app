@@ -163,7 +163,7 @@ div > div > ul > li a:focus {
 }
 
 .statusactive {
-    color: #008000;
+    color: #00CE00;
 }
 
 .statusmatured {
@@ -223,6 +223,11 @@ tr.graybg td, tr.graybg th {
 
 td.graybg {
      background-color: #F0F0F0;
+}
+
+
+td.left-border {
+     border-left: thick solid #F0F0F0;
 }
 
 hr.marginbottom {
@@ -789,6 +794,25 @@ input.marginbottom3px, textarea.marginbottom3px  {
     -ms-transition: all .50s ease-in-out;
     -o-transition: all .50s ease-in-out;
     transition: all .50s ease-in-out;
+    overflow: hidden;
+
+}
+
+.left-nav:hover{
+    border-right: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+.left-nav:hover::-webkit-scrollbar {
+    width: 6px !important;
+}
+
+.left-nav:hover::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, .2);
+}
+
+.left-nav:hover::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, .08);
 }
 
 .left-nav ul
@@ -1338,4 +1362,9 @@ h3.bolder {
 .icon-red{
     color:red;
     font-size: 18pt
+}
+.table-cell-scrollable{
+    height:30px;
+    overflow: auto;
+    font-size: 12px;
 }

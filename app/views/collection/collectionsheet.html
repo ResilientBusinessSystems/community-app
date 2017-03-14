@@ -42,7 +42,7 @@
 	
 	        <div class="col-sm-3">
 	            <select chosen="loanOfficers" id="loanOfficerId" ng-model="loanOfficerId"
-	                    ng-options="loanOfficer.id as loanOfficer.displayName for loanOfficer in loanOfficers"
+	                    ng-options="loanOfficer.id as loanOfficer.displayName for loanOfficer in loanOfficers | filter: 'true'  "
 	                    value="{{loanOfficer.id}}" ng-change="loanOfficerSelected(loanOfficerId)" class="form-control"
 	                    required>
 	                <option value="">{{'label.selectloanofficer' | translate}}</option>
@@ -112,14 +112,11 @@
 	                    </td>
 	                </tr>
 	                <tr ng-repeat="client in group.clients">
-	                    <td style="height:30px">
-	                        <table>
-	                            <tr>
-	                                <td>({{client.clientId}})</td>
-	                                <td>{{client.clientName}}</td>
-	                            </tr>
-	                        </table>
-	                    </td>
+						<td>
+						<div class="table-cell-scrollable">
+							({{client.clientId}}) {{client.clientName}}
+						</div>
+					</td>
 	                </tr>
 	                <tr>
 	                    <td class="graybg" style="height:30px" ng-show="collectionsheetdata.loanProducts">
